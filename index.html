@@ -1,0 +1,301 @@
+// App.jsx
+import React, { useState } from 'react';
+import { 
+  FiHome, 
+  FiBook, 
+  FiUsers, 
+  FiUserCheck, 
+  FiFileText, 
+  FiCalendar, 
+  FiMessageSquare, 
+  FiSettings,
+  FiBell,
+  FiSearch,
+  FiChevronDown,
+  FiMenu,
+  FiX
+} from 'react-icons/fi';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
+
+// Mock data
+const metricsData = [
+  { label: 'Total Courses', value: 24, icon: FiBook, trend: 12, positive: true },
+  { label: 'Total Students', value: 843, icon: FiUsers, trend: 8, positive: true },
+  { label: 'Pending Assignments', value: 12, icon: FiFileText, trend: -3, positive: false },
+  { label: 'Active Instructors', value: 18, icon: FiUserCheck, trend: 5, positive: true }
+];
+
+const recentActivities = [
+  { id: 1, title: 'Grade Assignment - Advanced React', course: 'CS401', due: 'Today', type: 'grading' },
+  { id: 2, title: 'Approve Student Registration', course: 'All Courses', due: 'Tomorrow', type: 'admin' },
+  { id: 3, title: 'Update Course Materials', course: 'Web Development', due: 'Dec 15', type: 'content' },
+  { id: 4, title: 'Schedule Final Exams', course: 'Database Systems', due: 'Dec 20', type: 'scheduling' }
+];
+
+const chartData = [
+  { name: 'Web Dev', students: 120 },
+  { name: 'Data Science', students: 98 },
+  { name: 'Mobile App', students: 85 },
+  { name: 'UX Design', students: 76 },
+  { name: 'Cloud Computing', students: 65 }
+];
+
+const upcomingEvents = [
+  { id: 1, title: 'Final Exam: Web Development', date: '2024-12-10', time: '10:00 AM' },
+  { id: 2, title: 'Faculty Meeting', date: '2024-12-12', time: '2:00 PM' },
+  { id: 3, title: 'Project Submission', date: '2024-12-15', time: '11:59 PM' }
+];
+
+const navigation = [
+  { name: 'Dashboard', icon: FiHome, current: true },
+  { name: 'Courses', icon: FiBook, current: false },
+  { name: 'Students', icon: FiUsers, current: false },
+  { name: 'Instructors', icon: FiUserCheck, current: false },
+  { name: 'Assignments', icon: FiFileText, current: false },
+  { name: 'Calendar', icon: FiCalendar, current: false },
+  { name: 'Messages', icon: FiMessageSquare, current: false },
+  { name: 'Settings', icon: FiSettings, current: false }
+];
+
+// Metric Card Component
+const MetricCard = ({ label, value, icon: Icon, trend, positive }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{value}</p>
+        <div className={`flex items-center mt-2 text-sm ${positive ? 'text-green-600' : 'text-rose-600'}`}>
+          <span>{positive ? '↑' : '↓'} {Math.abs(trend)}% from last month</span>
+        </div>
+      </div>
+      <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+        <Icon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+      </div>
+    </div>
+  </div>
+);
+
+// Activity Item Component
+const ActivityItem = ({ activity }) => (
+  <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+    <div className="flex items-center space-x-3">
+      <div className={`w-2 h-2 rounded-full ${
+        activity.type === 'grading' ? 'bg-amber-500' :
+        activity.type === 'admin' ? 'bg-green-500' :
+        activity.type === 'content' ? 'bg-indigo-500' : 'bg-blue-500'
+      }`} />
+      <div>
+        <p className="font-medium text-gray-900 dark:text-white">{activity.title}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{activity.course} • Due: {activity.due}</p>
+      </div>
+    </div>
+    <button className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-md text-sm font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors">
+      Action
+    </button>
+  </div>
+);
+
+// Event Item Component
+const EventItem = ({ event }) => (
+  <div className="flex items-center space-x-3 py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+    <div className="flex-shrink-0 w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
+      <FiCalendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="font-medium text-gray-900 dark:text-white truncate">{event.title}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        {format(new Date(event.date), 'MMM dd')} • {event.time}
+      </p>
+    </div>
+  </div>
+);
+
+// Navigation Sidebar Component
+const Sidebar = ({ isOpen, setIsOpen }) => (
+  <>
+    {/* Mobile overlay */}
+    {isOpen && (
+      <div 
+        className="fixed inset-0 bg-gray-600 bg-opacity-75 lg:hidden z-40"
+        onClick={() => setIsOpen(false)}
+      />
+    )}
+    
+    {/* Sidebar */}
+    <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    }`}>
+      <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold">CM</span>
+          </div>
+          <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">CourseManager</span>
+        </div>
+        <button 
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        >
+          <FiX className="w-6 h-6" />
+        </button>
+      </div>
+      
+      <nav className="mt-8 px-4">
+        <ul className="space-y-2">
+          {navigation.map((item) => (
+            <li key={item.name}>
+              <a
+                href="#"
+                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  item.current
+                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <item.icon className={`w-5 h-5 mr-3 ${item.current ? 'text-indigo-600 dark:text-indigo-400' : ''}`} />
+                {item.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  </>
+);
+
+// Main App Component
+const App = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  return (
+    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="flex">
+        {/* Sidebar */}
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+        
+        {/* Main content */}
+        <div className="flex-1 min-w-0 lg:flex lg:flex-col">
+          {/* Top navigation */}
+          <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <FiMenu className="w-6 h-6" />
+                </button>
+                
+                <div className="relative max-w-lg w-96 ml-4">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiSearch className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Search courses, students..."
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {darkMode ? '☀️' : '🌙'}
+                </button>
+                
+                <button className="relative p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <FiBell className="w-6 h-6" />
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full"></span>
+                </button>
+                
+                <div className="relative">
+                  <button className="flex items-center space-x-2 text-sm">
+                    <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-medium">JD</span>
+                    </div>
+                    <span className="text-gray-700 dark:text-gray-300">John Doe</span>
+                    <FiChevronDown className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+          
+          {/* Main content area */}
+          <main className="flex-1 p-6 sm:p-8">
+            {/* Welcome Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Good morning, John</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">You have 3 classes scheduled for today. Here's your dashboard overview.</p>
+            </div>
+            
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {metricsData.map((metric, index) => (
+                <MetricCard key={index} {...metric} />
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Recent Activities */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activities</h2>
+                  <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300">
+                    View all
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {recentActivities.map((activity) => (
+                    <ActivityItem key={activity.id} activity={activity} />
+                  ))}
+                </div>
+              </div>
+              
+              {/* Right Column */}
+              <div className="space-y-8">
+                {/* Course Progress Chart */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Course Enrollment</h2>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis dataKey="name" className="text-sm" />
+                        <YAxis className="text-sm" />
+                        <Tooltip />
+                        <Bar dataKey="students" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                {/* Upcoming Events */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Upcoming Events</h2>
+                    <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300">
+                      View calendar
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {upcomingEvents.map((event) => (
+                      <EventItem key={event.id} event={event} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
