@@ -1,0 +1,603 @@
+// App.jsx
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { 
+  FiHome, FiBook, FiUsers, FiUserCheck, FiFileText, FiCalendar, 
+  FiMessageSquare, FiSettings, FiBell, FiSearch, FiChevronDown, 
+  FiMenu, FiX, FiPlus, FiFilter, FiDownload, FiEdit, FiTrash2,
+  FiVideo, FiFile, FiLink, FiBarChart2, FiStar, FiClock, FiBookOpen
+} from 'react-icons/fi';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { format, addDays } from 'date-fns';
+
+// Mock Data
+const coursesData = [
+  { id: 1, title: 'Advanced Web Development', code: 'CS401', instructor: 'Dr. Sarah Johnson', students: 120, status: 'active', progress: 75, color: '#6366f1' },
+  { id: 2, title: 'Data Science Fundamentals', code: 'DS301', instructor: 'Prof. Mike Chen', students: 98, status: 'active', progress: 60, color: '#10b981' },
+  { id: 3, title: 'Mobile App Development', code: 'CS305', instructor: 'Dr. Emily Davis', students: 85, status: 'active', progress: 45, color: '#f59e0b' },
+  { id: 4, title: 'UX Design Principles', code: 'DS201', instructor: 'Prof. Alex Rivera', students: 76, status: 'draft', progress: 0, color: '#f43f5e' }
+];
+
+const studentsData = [
+  { id: 1, name: 'Alice Johnson', email: 'alice@uni.edu', course: 'CS401', progress: 89, joinDate: '2024-09-01', status: 'active' },
+  { id: 2, name: 'Bob Smith', email: 'bob@uni.edu', course: 'DS301', progress: 72, joinDate: '2024-09-02', status: 'active' },
+  { id: 3, name: 'Carol Williams', email: 'carol@uni.edu', course: 'CS305', progress: 65, joinDate: '2024-09-03', status: 'active' },
+  { id: 4, name: 'David Brown', email: 'david@uni.edu', course: 'CS401', progress: 91, joinDate: '2024-09-01', status: 'active' }
+];
+
+const assignmentsData = [
+  { id: 1, title: 'React Portfolio Project', course: 'CS401', dueDate: '2024-12-15', submissions: 45, totalStudents: 120, status: 'pending' },
+  { id: 2, title: 'Data Analysis Report', course: 'DS301', dueDate: '2024-12-12', submissions: 32, totalStudents: 98, status: 'graded' },
+  { id: 3, title: 'Mobile App Prototype', course: 'CS305', dueDate: '2024-12-18', submissions: 28, totalStudents: 85, status: 'pending' }
+];
+
+// Components
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+  </div>
+);
+
+const MetricCard = ({ label, value, icon: Icon, trend, positive, loading }) => {
+  if (loading) return <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 animate-pulse">
+    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+    <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+  </div>;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{value}</p>
+          <div className={`flex items-center mt-2 text-sm ${positive ? 'text-green-600' : 'text-rose-600'}`}>
+            <span>{positive ? '↑' : '↓'} {Math.abs(trend)}% from last month</span>
+          </div>
+        </div>
+        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+          <Icon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CourseCard = ({ course }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-all duration-300">
+    <div className="flex items-start justify-between mb-4">
+      <div>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          course.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+        }`}>
+          {course.status}
+        </span>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mt-2">{course.title}</h3>
+        <p className="text-gray-600 dark:text-gray-400">{course.code} • {course.instructor}</p>
+      </div>
+      <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: course.color }}>
+        <FiBookOpen className="w-6 h-6" />
+      </div>
+    </div>
+    
+    <div className="mt-4">
+      <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+        <span>Progress</span>
+        <span>{course.progress}%</span>
+      </div>
+      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div 
+          className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+          style={{ width: `${course.progress}%` }}
+        ></div>
+      </div>
+    </div>
+    
+    <div className="flex items-center justify-between mt-4 text-sm text-gray-600 dark:text-gray-400">
+      <span>{course.students} students</span>
+      <div className="flex space-x-2">
+        <button className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
+          <FiEdit className="w-4 h-4" />
+        </button>
+        <button className="p-2 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors">
+          <FiTrash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const Sidebar = ({ isOpen, setIsOpen, currentPath }) => {
+  const navigation = [
+    { name: 'Dashboard', icon: FiHome, href: '/', current: currentPath === '/' },
+    { name: 'Courses', icon: FiBook, href: '/courses', current: currentPath === '/courses' },
+    { name: 'Students', icon: FiUsers, href: '/students', current: currentPath === '/students' },
+    { name: 'Assignments', icon: FiFileText, href: '/assignments', current: currentPath === '/assignments' },
+    { name: 'Calendar', icon: FiCalendar, href: '/calendar', current: currentPath === '/calendar' },
+    { name: 'Messages', icon: FiMessageSquare, href: '/messages', current: currentPath === '/messages' },
+    { name: 'Settings', icon: FiSettings, href: '/settings', current: currentPath === '/settings' }
+  ];
+
+  return (
+    <>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-600 bg-opacity-75 lg:hidden z-40"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+      
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <FiBook className="w-5 h-5 text-white" />
+            </div>
+            <span className="ml-3 text-xl font-bold text-gray-900 dark:text-white">CourseMaster</span>
+          </div>
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <FiX className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <nav className="mt-8 px-4">
+          <ul className="space-y-2">
+            {navigation.map((item) => (
+              <li key={item.name}>
+                <a
+                  href={item.href}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    item.current
+                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <item.icon className={`w-5 h-5 mr-3 ${item.current ? 'text-indigo-600 dark:text-indigo-400' : ''}`} />
+                  {item.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </>
+  );
+};
+
+const Header = ({ onMenuClick, onThemeToggle, darkMode }) => (
+  <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+    <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        >
+          <FiMenu className="w-6 h-6" />
+        </button>
+        
+        <div className="relative max-w-lg w-96 ml-4">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FiSearch className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="Search courses, students..."
+          />
+        </div>
+      </div>
+      
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={onThemeToggle}
+          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        >
+          {darkMode ? '☀️' : '🌙'}
+        </button>
+        
+        <button className="relative p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+          <FiBell className="w-6 h-6" />
+          <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full"></span>
+        </button>
+        
+        <div className="relative">
+          <button className="flex items-center space-x-2 text-sm">
+            <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-medium">JD</span>
+            </div>
+            <span className="text-gray-700 dark:text-gray-300">John Doe</span>
+            <FiChevronDown className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+);
+
+// Pages
+const Dashboard = () => {
+  const metricsData = [
+    { label: 'Total Courses', value: '24', icon: FiBook, trend: 12, positive: true },
+    { label: 'Total Students', value: '843', icon: FiUsers, trend: 8, positive: true },
+    { label: 'Pending Assignments', value: '12', icon: FiFileText, trend: -3, positive: false },
+    { label: 'Active Instructors', value: '18', icon: FiUserCheck, trend: 5, positive: true }
+  ];
+
+  const chartData = [
+    { name: 'Web Dev', students: 120 },
+    { name: 'Data Science', students: 98 },
+    { name: 'Mobile App', students: 85 },
+    { name: 'UX Design', students: 76 },
+    { name: 'Cloud Computing', students: 65 }
+  ];
+
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6'];
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Welcome back! Here's your course management summary.</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {metricsData.map((metric, index) => (
+          <MetricCard key={index} {...metric} />
+        ))}
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Course Enrollment</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="name" className="text-sm" />
+                <YAxis className="text-sm" />
+                <Tooltip />
+                <Bar dataKey="students" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Course Distribution</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="students"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Recent Courses</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {coursesData.slice(0, 3).map((course) => (
+            <CourseCard key={course.id} course={course} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CoursesPage = () => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Courses</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Manage all your courses in one place</p>
+      </div>
+      <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+        <FiPlus className="w-5 h-5 mr-2" />
+        New Course
+      </button>
+    </div>
+    
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <div className="flex space-x-4">
+            <button className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <FiFilter className="w-4 h-4 mr-2" />
+              Filter
+            </button>
+            <button className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <FiDownload className="w-4 h-4 mr-2" />
+              Export
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+        {coursesData.map((course) => (
+          <CourseCard key={course.id} course={course} />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const StudentsPage = () => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Students</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Manage student enrollments and progress</p>
+      </div>
+      <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+        <FiPlus className="w-5 h-5 mr-2" />
+        Add Student
+      </button>
+    </div>
+    
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Student</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Course</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Progress</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Join Date</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {studentsData.map((student) => (
+            <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">{student.name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{student.email}</div>
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{student.course}</td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full" 
+                    style={{ width: `${student.progress}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{student.progress}%</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                {format(new Date(student.joinDate), 'MMM dd, yyyy')}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                  {student.status}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+const AssignmentsPage = () => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Assignments</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Manage and grade student assignments</p>
+      </div>
+      <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+        <FiPlus className="w-5 h-5 mr-2" />
+        New Assignment
+      </button>
+    </div>
+    
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {assignmentsData.map((assignment) => (
+        <div key={assignment.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{assignment.title}</h3>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              assignment.status === 'pending' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+            }`}>
+              {assignment.status}
+            </span>
+          </div>
+          
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{assignment.course}</p>
+          
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <span>Submissions</span>
+                <span>{assignment.submissions}/{assignment.totalStudents}</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div 
+                  className="bg-indigo-600 h-2 rounded-full" 
+                  style={{ width: `${(assignment.submissions / assignment.totalStudents) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <FiClock className="w-4 h-4 mr-2" />
+              Due: {format(new Date(assignment.dueDate), 'MMM dd, yyyy')}
+            </div>
+          </div>
+          
+          <div className="flex space-x-2 mt-4">
+            <button className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+              Grade
+            </button>
+            <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <FiEdit className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const CalendarPage = () => (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Calendar</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Upcoming events and schedule</p>
+      </div>
+      <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+        <FiPlus className="w-5 h-5 mr-2" />
+        New Event
+      </button>
+    </div>
+    
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+        {[...Array(7)].map((_, index) => {
+          const date = addDays(new Date(), index);
+          return (
+            <div key={index} className="text-center p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400">{format(date, 'EEE')}</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white my-2">{format(date, 'd')}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{format(date, 'MMM yyyy')}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+
+const MessagesPage = () => (
+  <div className="space-y-6">
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Messages</h1>
+      <p className="text-gray-600 dark:text-gray-400 mt-2">Communicate with students and instructors</p>
+    </div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+      <FiMessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No messages yet</h3>
+      <p className="text-gray-600 dark:text-gray-400">Start a conversation with your students or colleagues.</p>
+    </div>
+  </div>
+);
+
+const SettingsPage = () => (
+  <div className="space-y-6">
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
+      <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account and preferences</p>
+    </div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Profile Settings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
+              <input type="text" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" defaultValue="John Doe" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
+              <input type="email" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" defaultValue="john.doe@university.edu" />
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Notifications</h3>
+          <div className="space-y-3">
+            <label className="flex items-center">
+              <input type="checkbox" className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" defaultChecked />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Email notifications</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" defaultChecked />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Push notifications</span>
+            </label>
+          </div>
+        </div>
+        
+        <button className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// Main App Component
+const AppContent = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+
+  useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => setLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="flex">
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} currentPath={location.pathname} />
+        
+        <div className="flex-1 min-w-0 lg:flex lg:flex-col">
+          <Header 
+            onMenuClick={() => setSidebarOpen(true)} 
+            onThemeToggle={() => setDarkMode(!darkMode)} 
+            darkMode={darkMode} 
+          />
+          
+          <main className="flex-1 p-6 sm:p-8">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/courses" element={<CoursesPage />} />
+              <Route path="/students" element={<StudentsPage />} />
+              <Route path="/assignments" element={<AssignmentsPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const App = () => (
+  <Router>
+    <AppContent />
+  </Router>
+);
+
+export default App;
